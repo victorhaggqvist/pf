@@ -72,12 +72,13 @@ from slugify import slugify
 
 def to_camel_case(snake_str):
     components = snake_str.split('_')
-    return "".join(x.title() for x in components)
+    out =  "".join(x.title() for x in components)
+    out = out.replace('Uri', 'URI')
+    out = out.replace('Http', 'HTTP')
+    return out
 
 def template_code(obj):
     camel_slug = to_camel_case(obj['slug'])
-    camel_slug = camel_slug.replace('Uri', 'URI')
-    camel_slug = camel_slug.replace('Http', 'HTTP')
 
     tpl = """
 // {camel}Slug ..
@@ -114,6 +115,26 @@ func {camel}Detail(detail []string) *Fail {{
 """
     return tpl.format(camel=camel_slug, slug=obj['slug'], code=obj['code'])
 
+
+def generate_code_to_slug(codes_abs):
+    casepart = """
+    case {code}:
+        return {camel}Slug"""
+
+    out = """
+// CodeToSlug get the slug for a give status code
+func CodeToSlug(code int) string {
+    switch code {"""
+
+    for obj in codes_abs:
+        camel_slug = to_camel_case(obj['slug'])
+        out += casepart.format(camel=camel_slug, code=obj['code'])
+    return out+"""
+    }
+    return "err-unknown-code"
+}
+"""
+
 codes_abs = []
 for c in codes.split('\n'):
     obj = {'code': int(c[0:3]), 'msg': c[4:]}
@@ -136,6 +157,9 @@ buff += header
 for c in codes_abs:
     buff += template_code(c)
     # print(template_code(c))
+
+code_to_slug_func = generate_code_to_slug(codes_abs)
+buff += code_to_slug_func
 
 with open('generated.go', 'w') as f:
     f.write(buff)

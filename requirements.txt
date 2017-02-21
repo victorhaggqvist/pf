@@ -1,0 +1,2 @@
+python-slugify==1.2.1
+Unidecode==0.4.20
